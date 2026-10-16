@@ -13,23 +13,20 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Extract ZIP Project
+    - name: Find and Extract Zip
       run: |
-        echo "=== Extracting ZIP files ==="
-        for f in *.zip; do
-          [ -e "$f" ] || continue
-          unzip -o "$f"
-        done
-        
-        # إذا كانت الملفات مستخرجة داخل مجلد فرعي، نخرجها للجذر
-        if [ ! -f "settings.gradle" ] && [ ! -f "settings.gradle.kts" ]; then
-          SUBDIR=$(find . -maxdepth 2 -name "settings.gradle" -o -name "settings.gradle.kts" | head -n 1 | xargs dirname)
-          if [ -n "$SUBDIR" ] && [ "$SUBDIR" != "." ]; then
-            echo "Moving files from $SUBDIR to root..."
-            cp -r $SUBDIR/* .
-          fi
-        fi
-        
+        echo "Searching for zip files..."
+        ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
+        if [ -n "$ZIP_FILE" ]; then
+          echo "Found zip file: $ZIP_FILE"
+          unzip -o "$ZIP_FILE" -d extracted_files
+          
+          # نقل محتويات المجلد المستخرج إلى الجذر الرئيسي للمستودع
+          cp -r extracted_files/*/* extracted_files/*/.* . 2>/dev/null || cp -r extracted_files/*/. . 2>/dev/null || cp -r extracted_files/* .
+        else
+          echo "Error: No zip file found in root!"
+          exit 1
+        }
         ls -la
 
     - name: Set up JDK 17
@@ -38,22 +35,17 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
-
-    - name: Build Debug APK
+    - name: Grant execute permission for gradlew
       run: |
         if [ -f "./gradlew" ]; then
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug
         else
-          gradle assembleDebug --stacktrace
+          gradle assembleDebug
         fi
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: IBO-Xtream-Player-APK
-        path: |
-          app/build/outputs/apk/debug/*.apk
-          **/build/outputs/apk/debug/*.apk
+        path: app/build/outputs/apk/debug/app-debug.apk
