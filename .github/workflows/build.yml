@@ -24,7 +24,6 @@ jobs:
         echo "Searching for build.gradle files..."
         find . -name "build.gradle" -o -name "build.gradle.kts"
         
-        # إذا وجدنا ملفات المشروع في مجلد فرعي، ننتقل إليه للبناء
         PROJECT_DIR=$(dirname $(find . -maxdepth 3 -name "settings.gradle" -o -name "settings.gradle.kts" | head -n 1))
         if [ "$PROJECT_DIR" != "." ] && [ -n "$PROJECT_DIR" ]; then
           echo "Moving to project directory: $PROJECT_DIR"
