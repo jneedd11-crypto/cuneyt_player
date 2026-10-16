@@ -1,4 +1,4 @@
-name: Build Android APK from ZIP
+name: Build Android APK Direct
 
 on:
   push:
@@ -13,39 +13,35 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Find and Extract Zip
-      run: |
-        echo "Searching for zip files..."
-        ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
-        if [ -n "$ZIP_FILE" ]; then
-          echo "Found zip file: $ZIP_FILE"
-          unzip -o "$ZIP_FILE" -d extracted_files
-          
-          # نقل محتويات المجلد المستخرج إلى الجذر الرئيسي للمستودع
-          cp -r extracted_files/*/* extracted_files/*/.* . 2>/dev/null || cp -r extracted_files/*/. . 2>/dev/null || cp -r extracted_files/* .
-        else
-          echo "Error: No zip file found in root!"
-          exit 1
-        }
-        ls -la
-
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Grant execute permission for gradlew
+    - name: Find and Build Project
       run: |
+        echo "Searching for build.gradle files..."
+        find . -name "build.gradle" -o -name "build.gradle.kts"
+        
+        # إذا وجدنا ملفات المشروع في مجلد فرعي، ننتقل إليه للبناء
+        PROJECT_DIR=$(dirname $(find . -maxdepth 3 -name "settings.gradle" -o -name "settings.gradle.kts" | head -n 1))
+        if [ "$PROJECT_DIR" != "." ] && [ -n "$PROJECT_DIR" ]; then
+          echo "Moving to project directory: $PROJECT_DIR"
+          cd "$PROJECT_DIR"
+        fi
+
         if [ -f "./gradlew" ]; then
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace
         else
-          gradle assembleDebug
+          gradle assembleDebug --stacktrace
         fi
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: IBO-Xtream-Player-APK
-        path: app/build/outputs/apk/debug/app-debug.apk
+        path: |
+          app/build/outputs/apk/debug/*.apk
+          **/build/outputs/apk/debug/*.apk
