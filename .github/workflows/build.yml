@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK from ZIP
 
 on:
   push:
@@ -12,6 +12,10 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
+
+    - name: Unzip Project Files
+      run: |
+        unzip -o *.zip || true
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
